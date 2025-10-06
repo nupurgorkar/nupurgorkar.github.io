@@ -17,6 +17,7 @@ canvas,
 svg {
   display: block;
   max-width: 100%;
+  padding: 30px;
 }
 
 body {
