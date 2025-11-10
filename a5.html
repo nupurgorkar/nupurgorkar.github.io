@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, maximum-scale=1.0" />
+
+    <title>Nupur's HCDE 439 Physical Computing Page!</title>
+
+    <link href="style.css" rel="stylesheet" type="text/css" />
+  </head>
+  <body>
+    <h1>Nupur's Assignment 4!</h1>
+    <div class="header">
+      <img src="imgs4/video.gif" />
+      <h1>Here is all the documentation for assignment 4: Libraries</h1>
+    </div>
+    <div class="content">
+      <h2>Overview</h2>
+      <p>
+        For this assignment, I used a capacitor to trigger a servo motor to move back
+        and forth. When the capacitor is not being touched, the servo motor is at 0 degrees unless
+        it is continuing a previous rotation.
+      </p>
+      <img src="/imgs4/schematic.png" />
+      <p>
+        I used 1 M ohm resistor for the capacitor voltage divider. This was because
+        I wanted the servo motor to move when the capacitor was being touched. 
+      </p>
+      <h2>Code</h2>
+      <p>
+        Here is the code I used:
+      </p>
+      <pre>
+      /*
+ * CapitiveSense Library Demo Sketch
+ * Paul Badger 2008
+ * Uses a high value resistor e.g. 10M between send pin and receive pin
+ * Resistor effects sensitivity, experiment with values, 50K - 50M. Larger resistor values yield larger sensor values.
+ * Receive pin is the sensor pin - try different amounts of foil/metal on this pin
+ */
+
+ /* Sweep
+ by BARRAGAN <http://barraganstudio.com>
+ This example code is in the public domain.
+
+ modified 8 Nov 2013
+ by Scott Fitzgerald
+ https://www.arduino.cc/en/Tutorial/LibraryExamples/Sweep
+*/
+
+
+#include <CapacitiveSensor.h>
+#include <Servo.h>
+Servo myservo;       // create servo object
+//pin for servo pin
+int servoPin = 9;
+//starting position for servo pin
+int pos = 0;
+//based on serial monitor readings, my capacitor reads roughly 280-290. When it is touched, it reads
+//roughly 800, which is why I am choosing an inbetween value. 
+int threshold = 400;
+// 1M resistor between pins 4 & 2, pin 2 is sensor pin
+CapacitiveSensor   cs_4_2 = CapacitiveSensor(4,2);        
+
+void setup()                    
+{
+    cs_4_2.set_CS_AutocaL_Millis(0xFFFFFFFF);     // turn off autocalibrate on channel 1 - just as an example
+    myservo.attach(servoPin);
+    Serial.begin(9600);
+}
+
+void loop()                    
+{
+    //referenced from library code
+    long start = millis();
+    long total =  cs_4_2.capacitiveSensor(30);
+
+
+    Serial.print("Capacitive touch value:");
+    Serial.print(total);                  // print sensor output in serial monitor
+
+    if(total > threshold) {
+        for (pos = 0; pos <= 180; pos += 1) { // goes from 0 degrees to 180 degrees
+    // in steps of 1 degree
+            myservo.write(pos);              // tell servo to go to position in variable 'pos'
+            delay(15);                       // waits 15 ms for the servo to reach the position
+        }
+        for (pos = 180; pos >= 0; pos -= 1) { // goes from 180 degrees to 0 degrees
+            myservo.write(pos);              // tell servo to go to position in variable 'pos'
+            delay(15);                       // waits 15 ms for the servo to reach the position
+        }
+    }
+
+    delay(50);                             // arbitrary delay to limit data to serial port 
+}
+
+
+
+      </pre>
+
+      <h2>Additional Questions</h2>
+      <img src="imgs3/q1.png" />
+      <p>
+        1. My understanding of this question is that there would be 5 pulses where the width increases 
+        over each pulse. At pos = 0 the width would be 1 ms, at pos = 90 the width would be 1.5 ms, and at pos = 180 the width would be 2 ms.
+        This is because the servo library uses a pulse width modulation technique to control the angle of the servo motor. 
+        I used this website to help me understand how the servo library works: https://learn.sparkfun.com/tutorials/hobby-servo-tutorial/all
+      </p>
+
+      <p>
+        2. If my input is giving an erroneous reading 1% of the time,
+
+        1. Print out the values on the serial monitor to see the general range 
+        2. Identify outliers
+        3. create a constrained range of values that are acceptable based on the serial monitor readings.
+        
+      <p>
+        3. If my input device was too noisy and flucating up and down by 10% from the true value, this 
+        is how I would apply it to my project specifically:
+
+        1. Print out the values on the serial monitor to see the general range
+        2. Take an average of a set of readings to smooth out the noise
+        3. Create a threshold that is 10% higher than the average to account for noise and use that as the 
+        input threshold to trigger the servo motor. 
+      </p>
+
+      <p>
+        4. I used AI tools to help debug my code. I did not use it for any of the conceptual questions. 
+        One prompt I asked it was "What is wrong with this code trying to combine these 2 libraries". 
+      </p>
+      <img src = "imgs4/video.gif" />
+    </div>
+  </body>
+</html>
