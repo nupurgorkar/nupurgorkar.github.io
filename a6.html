@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, maximum-scale=1.0" />
+
+    <title>Nupur's HCDE 439 Physical Computing Page!</title>
+
+    <link href="style.css" rel="stylesheet" type="text/css" />
+  </head>
+  <body>
+    <h1>Nupur's Assignment 5!</h1>
+    <div class="header">
+      <img src="a6/video.gif" />
+      <h1>Here is all the documentation for assignment 6: Talking to the Web</h1>
+    </div>
+    <div class="content">
+      <h2>Overview</h2>
+      <p>
+        For this assignment, I used a joystick to control a player on the screen to move left, right, up, and down. 
+        They are supposed to move the player to the bottom of the screen to win, and then press 
+        the spacebar to light up an LED. 
+      </p>
+      <img src="/a6/schematic.png" />
+      <p>
+        For the joystick, I used 2 analog inputs to read the X and Y positions. 
+        For the LED, I used a digital output on pin 13, and used a 220 ohm resistor based
+        on my calculations.
+      <h2>Code</h2>
+      <p>
+        Here is the code I used for the arduino:
+      </p>
+      <pre>
+        //referenced https://www.youtube.com/watch?v=9z5FsTzYWE4 to set up joystick
+
+        //pin that connects to VRx
+        int xPin = A0;
+        //pin that connects to VRy
+        int yPin = A1;
+        //pin that connects to SW for the button
+        int buttonPin = 2;
+        //pin that connects to LED
+        int ledPin = 13;
+
+        //x position
+        int xVal;
+        //y position
+        int yVal;
+        //checks if the button is on or off 
+        int buttonState;
+
+        //sets up serial communication with the x and y positions and button and LED
+        void setup() {
+          Serial.begin(9600);
+          pinMode(xPin, INPUT);
+          pinMode(yPin, INPUT);
+          pinMode(buttonPin, INPUT_PULLUP);
+          pinMode(ledPin, OUTPUT);
+        }
+
+        //reads the x, y, and button state values
+        void loop() {
+          xVal = analogRead(xPin);
+          yVal = analogRead(yPin);
+          buttonState = digitalRead(buttonPin);
+
+        //Serial Communication separated by comma
+          Serial.print(xVal);
+          Serial.print(",");
+          Serial.print(yVal);
+          Serial.print(",");
+          Serial.println(buttonState);
+
+        //serial communication for the LED output
+          if (Serial.available() > 0) {
+            char command = Serial.read();
+            if (command == '1') {
+              digitalWrite(ledPin, HIGH); // Turns LED on
+            } else if (command == '0') {
+              digitalWrite(ledPin, LOW); // Turns LED off
+            }
+          }
+
+          delay(75); //delays the reading of the next input  
+        }
+      </pre>
+      <p>Here is my code for the web interface:</p>
+      <pre>
+        const BAUD_RATE = 9600; // This should match the baud rate in your Arduino sketch
+
+        let port, connectBtn; // Declare global variables
+        //let x = 10;
+        //let speed = 20;
+
+        let playerRadius = 25;
+        let xplayer;
+        let yplayer;
+
+        function setup() {
+          setupSerial(); // Run our serial setup function (below)
+
+          // Create a canvas that is the size of our browser window.
+          // windowWidth and windowHeight are p5 variables
+          createCanvas(windowWidth, windowHeight);
+          xplayer = windowWidth / 2;
+          yplayer = playerRadius;
+        }
+
+        function draw(){
+            const portIsOpen = checkPort(); // Check whether the port is open (see checkPort function below)
+            if (!portIsOpen) return; // If the port is not open, exit the draw loop
+
+            let str = port.readUntil("\n"); // Read from the port until the newline
+            if (str.length == 0) return; // If we didn't read anything, return.
+            background(220);
+            ellipse(xplayer, yplayer, playerRadius * 2, playerRadius * 2);
+            
+            let positionArray = str.trim().split(","); // Trim whitespace and split on commas
+
+            // Convert each element from the serial communication to an integer
+            const xPos = positionArray[0]
+            const yPos = positionArray[1]
+
+            //sets up control of the player based on joystick input
+            if (yPos > 545) {
+                yplayer += 5;
+            }
+            if (yPos < 400){
+                yplayer -= 5;
+            }
+
+            if (xPos > 545) {
+                xplayer += 5;
+            }
+            if (xPos < 400){
+                xplayer -= 5;
+            }
+
+            //text displayed when the player reaches the bottom of the screen
+            if (yplayer >= windowHeight - playerRadius) {
+                text("Congrats on reaching the bottom! \nPress the space bar to light up your LED and celebrate.", windowWidth / 2, windowHeight / 2);
+            }
+        }
+
+        function keyPressed() {
+            if (key === ' ') { // Check if spacebar is pressed
+                port.write('1'); // Send '1' to turn LED on
+                return false; // Prevent default spacebar behavior
+            }
+        }
+
+        function keyReleased() {
+            if (key === ' ') { // Check if spacebar is released
+                port.write('0'); // Send '0' to turn LED off
+                return false;
+            }
+        }
+
+        // Three helper functions for managing the serial connection.
+
+        function setupSerial() {
+          port = createSerial();
+
+          // Check to see if there are any ports we have used previously
+          let usedPorts = usedSerialPorts();
+          if (usedPorts.length > 0) {
+            // If there are ports we've used, open the first one
+            port.open(usedPorts[0], BAUD_RATE);
+          }
+
+          // create a connect button
+          connectBtn = createButton("Connect to Arduino");
+          connectBtn.position(5, 5); // Position the button in the top left of the screen.
+          connectBtn.mouseClicked(onConnectButtonClicked); // When the button is clicked, run the onConnectButtonClicked function
+        }
+
+        function checkPort() {
+          if (!port.opened()) {
+            // If the port is not open, change button text
+            connectBtn.html("Connect to Arduino");
+            // Set background to gray
+            background("gray");
+            return false;
+          } else {
+            // Otherwise we are connected
+            connectBtn.html("Disconnect");
+            return true;
+          }
+        }
+
+        function onConnectButtonClicked() {
+          // When the connect button is clicked
+          if (!port.opened()) {
+            // If the port is not opened, we open it
+            port.open(BAUD_RATE);
+          } else {
+            // Otherwise, we close it!
+            port.close();
+          }
+        }
+
+      </pre>
+      <img src = "a6/video.gif" />
+    </div>
+  </body>
+</html>
